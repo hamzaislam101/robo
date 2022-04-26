@@ -5,7 +5,7 @@
 <title>Javascript implementation of Steven Fortune's algorithm to compute Voronoi diagrams: Demo 2</title>
 <meta name="Keywords" lang="en" content="voronoi, fortune, javascript, raymond hill"/>
 <!--[if lte IE 8]><script type="text/javascript" src="excanvas/excanvas.compiled.js"></script><![endif]-->
-<script type="text/javascript" src="./Javascript-Voronoi-master/Javascript-Voronoi-master/rhill-voronoi-core.min.js"></script>
+<script type="text/javascript" src="./Javascript-Voronoi-master/Javascript-Voronoi-master/rhill-voronoi-core.js"></script>
 <style type="text/css">
 body {font-family:tahoma,verdana,arial;font-size:13px;margin:0;padding:0}
 body > div {margin-left:4px;margin-right:4px;}
@@ -24,6 +24,8 @@ var VoronoiDemo = {
 	diagram: null,
 	margin: 100,
 	canvas: null,
+    obstacles : [],
+    obPoints : [],
 	bbox: {xl:0,xr:800,yt:0,yb:600},
 
 	normalizeEventCoords: function(target,e) {
@@ -48,6 +50,7 @@ var VoronoiDemo = {
 		var me = this;
 		var drawFlag = false;
         var counter = 0;
+        
 		this.canvas = document.getElementById('voronoiCanvas');
 		// this.canvas.onmousemove = function(e) {
 		// 	if (!me.sites.length) {return;}
@@ -65,7 +68,7 @@ var VoronoiDemo = {
 			};
 		this.canvas.onmousedown = function(e){
 			drawFlag = true;
-			
+			me.obPoints = [];
 		};
 
 		this.canvas.onmousemove = function(e){
@@ -73,6 +76,7 @@ var VoronoiDemo = {
 			if(counter%5==0 && drawFlag == true){
 					
 					var mouse = me.normalizeEventCoords(me.canvas,e);
+                    me.obPoints.push({x:mouse.x,y:mouse.y});
 					me.addSite(mouse.x,mouse.y);
 					me.render();
 				} 
@@ -80,11 +84,16 @@ var VoronoiDemo = {
 
 		this.canvas.onmouseup = function(e){
 			drawFlag = false;
+            me.obstacles.push(me.obPoints);
+            me.obstacles.forEach(ob => {
+                console.log(me.obstacles);
+                console.log(ob.length);
+            });
 		};
 
         
 
-		this.randomSites(10,true);
+		//this.randomSites(10,true);
 		this.render();
 		},
 
@@ -93,15 +102,73 @@ var VoronoiDemo = {
 		this.sites = [{x:0,y:0}];
 		this.diagram = this.voronoi.compute(this.sites, this.bbox);
 		},
+        IsOnLeft: function( a,  b, c)
+        {
+            return this.Area2(a, b, c) > 0;
+        },
+
+        IsOnRight: function(a,b,c)
+        {
+            return this.Area2(a, b, c) < 0;
+        },
+
+        IsCollinear:function (a,b, c)
+        {
+            return this.Area2(a, b, c) == 0;
+        },
+
+        // calculates the triangle's size (formed by the "anchor" segment and additional point)
+        Area2:function(a,  b,  c)
+        {
+            if (c == undefined){
+                c={x:0,y:0};
+            }
+            return (b.x - a.x) * (c.y - a.y) -
+                    (c.x - a.x) * (b.y - a.y);
+        },
     clearInternalEdges: function(){
         //for each pair of points, check if the distance between them is less than a threshold. If yes, then continue looking for an edge that is between them
         //meaning an edge that intersects the edge between these two points
         //this will remove any edges leading to obstacle
-        var allEdges = this.diagram.edges;
-        allEdges.forEach(edge => {
-            console.log(edge);
-        });
+        var removedEdges = [];
+        const distance = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1); 
 
+        
+
+        
+        this.diagram.edges.forEach(edge => {
+            if (edge.rSite == undefined){
+                edge.rSite = {x:0,y:0};
+            }
+            var d = distance(edge.lSite.x, edge.lSite.y,edge.rSite.x , edge.rSite.y);
+            console.log(d);
+            if(d<200){
+
+                removedEdges.push(edge);
+            }
+        });
+        // this.obstacles.forEach(obstacle => {
+        //     var n = obstacle.length;
+            
+        //     for( var i = 0;i<n-1;i++){
+                
+        //         this.diagram.edges.forEach(edge => {
+                    
+        //             //if this edge intersects obstacle[i] and obstacle[i+1]
+        //             // if((this.IsOnLeft(obstacle[i],obstacle[i+1],edge.lSite) && this.IsOnRight(obstacle[i],obstacle[i+1],edge.rSite)) || this.IsOnLeft(obstacle[i],obstacle[i+1],edge.rSite) && this.IsOnRight(obstacle[i],obstacle[i+1],edge.lSite)){
+        //             //     removedEdges.push(edge);
+        //             // }
+        //         });
+        //     }
+        // });
+        
+        var allEdges = this.diagram.edges;
+        removedEdges.forEach(edge => {
+            this.diagram.edges = this.diagram.edges.filter(x=>x!==edge);
+            
+        });
+        console.log(this.diagram.edges);
+        this.render();
     },
 	randomSites: function(n,clear) {
 		if (clear) {this.sites = [];}
