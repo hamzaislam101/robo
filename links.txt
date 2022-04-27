@@ -1,0 +1,7 @@
+http://blog.ivank.net/voronoi-diagram-in-javascript.html fluid movement
+
+http://blog.ivank.net/fortunes-algorithm-and-implementation.html c++
+
+https://jacquesheunis.com/post/fortunes-algorithm/ sweep line motion
+
+https://github.com/gorhill/Javascript-Voronoi js voronoi

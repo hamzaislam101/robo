@@ -18,6 +18,9 @@ h4 > span {cursor:pointer}
 #voronoiCode span {color:green;font-weight:bold;}
 </style>
 <script id="script" type="text/javascript">
+	window.oncontextmenu = function(e){
+		e.preventDefault();
+	}
 var VoronoiDemo = {
 	voronoi: new Voronoi(),
 	sites: [],
@@ -26,7 +29,9 @@ var VoronoiDemo = {
 	canvas: null,
     obstacles : [],
     obPoints : [],
-	bbox: {xl:0,xr:800,yt:0,yb:600},
+	start:null,
+	end:null,
+	bbox: {xl:0,xr:900,yt:0,yb:800},
 
 	normalizeEventCoords: function(target,e) {
 		// http://www.quirksmode.org/js/events_properties.html#position
@@ -67,8 +72,29 @@ var VoronoiDemo = {
 			// me.render();
 			};
 		this.canvas.onmousedown = function(e){
-			drawFlag = true;
-			me.obPoints = [];
+			e.preventDefault();
+			if (e.which === 3 || e.button === 2)
+			{
+				var mouse = me.normalizeEventCoords(me.canvas,e);
+				if(me.start == null || me.end!=null){
+					me.start = {x:mouse.x,y:mouse.y};
+					me.end = null;
+					var minDis = 0;
+					me.diagram.edges.forEach(edge => {
+						
+					});
+
+				}
+				else{
+					me.end = {x:mouse.x,y:mouse.y};
+				}
+				
+				me.render();
+			}
+			else{
+				drawFlag = true;
+				me.obPoints = [];
+			}
 		};
 
 		this.canvas.onmousemove = function(e){
@@ -83,12 +109,16 @@ var VoronoiDemo = {
 		};
 
 		this.canvas.onmouseup = function(e){
-			drawFlag = false;
-            me.obstacles.push(me.obPoints);
-            me.obstacles.forEach(ob => {
-                console.log(me.obstacles);
-                console.log(ob.length);
-            });
+			if (e.which === 3 || e.button === 2)
+			{
+				
+				console.log('Right mouse up button at ' + e.clientX + 'x' + e.clientY);
+			}
+			else{
+				drawFlag = false;
+            	me.obstacles.push(me.obPoints);
+			}
+			
 		};
 
         
@@ -138,11 +168,11 @@ var VoronoiDemo = {
         
         this.diagram.edges.forEach(edge => {
             if (edge.rSite == undefined){
-                edge.rSite = {x:0,y:0};
+                edge.rSite = {x:999,y:9999};
             }
             var d = distance(edge.lSite.x, edge.lSite.y,edge.rSite.x , edge.rSite.y);
             console.log(d);
-            if(d<200){
+            if(d<120){
 
                 removedEdges.push(edge);
             }
@@ -235,7 +265,7 @@ var VoronoiDemo = {
 					v = halfedges[iHalfedge].getEndpoint();
 					ctx.lineTo(v.x,v.y);
 					}
-				ctx.fillStyle = '#faa';
+				//ctx.fillStyle = '#faa';
 				ctx.fill();
 				}
 			}
@@ -243,51 +273,41 @@ var VoronoiDemo = {
 		var site;
 		ctx.beginPath();
 		ctx.fillStyle = '#44f';
+		
 		while (nSites--) {
 			site = sites[nSites];
 			ctx.rect(site.x-2/3,site.y-2/3,2,2);
 			}
 		ctx.fill();
+
+		ctx.beginPath();
+		ctx.fillStyle = '#ff0000';
+		if(this.start != null){
+			var endPoint = this.start;
+			ctx.fillRect(endPoint.x-2/3,endPoint.y-2/3,5,5);
+		}
+		if(this.end != null){
+			var endPoint = this.end;
+			ctx.fillRect(endPoint.x-2/3,endPoint.y-2/3,5,5);
+		}
+
 		},
 	};
 </script>
 </head>
 <body onload="VoronoiDemo.init();">
-<a href="https://github.com/gorhill/Javascript-Voronoi"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
-<h1>Javascript implementation of Steven Fortune's algorithm to compute Voronoi diagrams<br/>Demo 2: A bit of interactivity added</h1>
-<div id="divroot" style="width:800px;">
-<p style="margin-top:0;margin-bottom:0"><a href="/voronoi/rhill-voronoi.html">&lt; Back to main page</a><ul style="margin-top:0">
-<li><a href="rhill-voronoi-demo1.html">Demo 1: measuring peformance</a>
-<li><b>Demo 2: a bit of interactivity</b>
-<li><a href="rhill-voronoi-demo3.php">Demo 3: Fancy tiling</a>
-<li><a href="rhill-voronoi-demo4.html">Demo 4: Looking up a Voronoi cell using a quadtree</a>
-<li><a href="rhill-voronoi-demo5.html">Demo 5: Lloyd's relaxation</a>
-<li><a href="http://www.raymondhill.net/blog/?p=458#comments">Comments</a>
-</ul></p>
-<h4 class="divhdr">Sites generator</h4>
-<div class="divinfo" id="voronoiGenerator">
+<!--<h4 class="divhdr">Sites generator</h4>
+<div class="divinfo" id="voronoiGenerator">-->
 <input type="button" onclick="VoronoiDemo.clearInternalEdges()" value="Clear Internal Edges" />
-<input type="button" value="Generate" onclick="VoronoiDemo.randomSites(parseInt(document.getElementById('voronoiNumberSites').value,10),true);VoronoiDemo.render();"/> or <input type="button" value="Add" onclick="VoronoiDemo.randomSites(parseInt(document.getElementById('voronoiNumberSites').value,10),false);VoronoiDemo.render();"/><input id="voronoiNumberSites" type="text" value="10" size="5" maxlength="5"/> sites randomly (Warning: performance might suffer the more sites you add.)
+<!--<input type="button" value="Generate" onclick="VoronoiDemo.randomSites(parseInt(document.getElementById('voronoiNumberSites').value,10),true);VoronoiDemo.render();"/> or <input type="button" value="Add" onclick="VoronoiDemo.randomSites(parseInt(document.getElementById('voronoiNumberSites').value,10),false);VoronoiDemo.render();"/><input id="voronoiNumberSites" type="text" value="10" size="5" maxlength="5"/> sites randomly (Warning: performance might suffer the more sites you add.)
 <br/><input id="voronoiClearSites" type="button" value="Clear all sites" onclick="VoronoiDemo.clearSites();VoronoiDemo.render();"/>
-</div>
-<h4 class="divhdr">Canvas</h4>
+</div>-->
+<h1 class="divhdr">Canvas</h1>
 <div id="canvasParent">
-<noscript>You need to enable Javascript in your browser for this page to display properly.</noscript>
 <canvas id="voronoiCanvas" style="cursor:crosshair" width="800" height="600"></canvas>
-<div id="voronoiNoCanvasAlert" style="display:none;padding:1em;background-color:#fcc;color:black;">
-<p>Your browser doesn't support the HTML5 &lt;canvas&gt; element technology.</p>
-<p>See <a target="_blank" href="http://en.wikipedia.org/wiki/Canvas_(HTML_element)">Wikipedia</a> for information on which browsers support the <u>HTML5 &lt;canvas&gt;</u> technology.</p>
+
 </div>
-</div>
-<h4 class="divhdr">Javascript source code for this page</h4>
-<div class="divinfo" id="voronoiCode">
-<pre>
-<span>&lt;script type=&quot;text/javascript&quot; src=&quot;<a href="rhill-voronoi-core.js" target="_blank">rhill-voronoi-core.js</a>&quot;&gt;&lt;/script&gt;</span>
-...
-<div id="scriptContainer"></div>
-...
-</pre>
-</div>
+
 </div>
 <script>
 (function(){
