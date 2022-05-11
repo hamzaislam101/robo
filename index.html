@@ -24,6 +24,7 @@ h4 > span {cursor:pointer}
 var VoronoiDemo = {
 	voronoi: new Voronoi(),
 	sites: [],
+	robo:null,
 	diagram: null,
 	margin: 100,
 	canvas: null,
@@ -55,7 +56,10 @@ var VoronoiDemo = {
 		var me = this;
 		var drawFlag = false;
         var counter = 0;
-        
+		this.currEdge = null;
+		this.milliseconds = 0;
+        this.robo = {width:2,height:2,x:25,y:25};
+		this.runRobo = false;
 		this.canvas = document.getElementById('voronoiCanvas');
 		// this.canvas.onmousemove = function(e) {
 		// 	if (!me.sites.length) {return;}
@@ -88,8 +92,8 @@ var VoronoiDemo = {
 				else{
 					me.end = {x:mouse.x,y:mouse.y};
 				}
-				
-				me.render();
+				//renderCanvas();
+				//me.render();
 			}
 			else{
 				drawFlag = true;
@@ -104,7 +108,8 @@ var VoronoiDemo = {
 					var mouse = me.normalizeEventCoords(me.canvas,e);
                     me.obPoints.push({x:mouse.x,y:mouse.y});
 					me.addSite(mouse.x,mouse.y);
-					me.render();
+					//me.render();
+					//renderCanvas();
 				} 
 		};
 
@@ -124,9 +129,43 @@ var VoronoiDemo = {
         
 
 		//this.randomSites(10,true);
-		this.render();
+		// setTimeout(function() {
+        //       requestAnimationFrame(renderCanvas);
+        //   }, 1000 / 120);
+		renderCanvas();
+		//this.render();
 		},
+		run:function(){
+			this.runRobo = !this.runRobo;
+			if(this.runRobo){
+				var startEdge = this.diagram.edges[20];
+			
+				var currentEdge = startEdge;
+				
+				VoronoiDemo.currEdge = startEdge;
+				this.robo.x = VoronoiDemo.currEdge.va.x;
+				this.robo.y = VoronoiDemo.currEdge.va.y;
 
+				setInterval(updateRoboPos,100);
+				// var prevEdge = null;
+				// while (currentEdge != prevEdge){
+					
+				// 	console.log("updated",this.robo.x+" "+this.robo.y);
+					
+				// 	prevEdge = currentEdge;
+				// 	for(var i =0;i<this.diagram.edges.length;i++) {
+				// 		var edge = this.diagram.edges[i];
+				// 		if(edge.va == currentEdge.vb){
+				// 			console.log(edge);
+				// 			currentEdge = edge;
+				// 			break;
+				// 		}
+				// 	}
+				// }
+			}
+			
+			
+		},
 	clearSites: function() {
 		// we want at least one site, the one tracking the mouse
 		this.sites = [{x:0,y:0}];
@@ -172,7 +211,7 @@ var VoronoiDemo = {
             }
             var d = distance(edge.lSite.x, edge.lSite.y,edge.rSite.x , edge.rSite.y);
             console.log(d);
-            if(d<120){
+            if(d<60){
 
                 removedEdges.push(edge);
             }
@@ -198,7 +237,8 @@ var VoronoiDemo = {
             
         });
         console.log(this.diagram.edges);
-        this.render();
+		//renderCanvas();
+        //this.render();
     },
 	randomSites: function(n,clear) {
 		if (clear) {this.sites = [];}
@@ -290,15 +330,175 @@ var VoronoiDemo = {
 			var endPoint = this.end;
 			ctx.fillRect(endPoint.x-2/3,endPoint.y-2/3,5,5);
 		}
-
-		},
+		if (this.runRobo){
+			this.robo.x = this.robo.x+15;
+			this.robo.y = this.robo.y+15;
+		}
+		console.log(this.runRobo)
+		console.log(this.robo)
+		ctx.beginPath();
+		ctx.fillStyle = "#0000ff";
+		ctx.fillRect(this.robo.x,this.robo.y,this.robo.width*5,this.robo.height*5);
+		}
 	};
+
+	var updateRoboPos = function(){
+		if(VoronoiDemo.currEdge == null){
+			return;
+		}
+		if(VoronoiDemo.currEdge.vb.x == VoronoiDemo.robo.x && VoronoiDemo.currEdge.vb.y == VoronoiDemo.robo.y){
+			//go on look for new edge
+			for(var i =0;i<VoronoiDemo.diagram.edges.length;i++) {
+						var edge = VoronoiDemo.diagram.edges[i];
+						if(edge.va.x == VoronoiDemo.currEdge.vb.x && edge.va.y == VoronoiDemo.currEdge.vb.y){
+							console.log(edge);
+							VoronoiDemo.currEdge = edge;
+							console.log("new edge"+edge);
+							break;
+						}
+					}
+		}
+		else{
+
+			var data = distanceAndAngleBetweenTwoPoints(VoronoiDemo.robo.x, VoronoiDemo.robo.y, VoronoiDemo.currEdge.vb.x,VoronoiDemo.currEdge.vb.y);
+			var velocity = data.distance / 0.2;
+			var toEdgePointVector = new Vector(velocity, data.angle);
+			VoronoiDemo.milliseconds+=100;
+			var elapsedSeconds = VoronoiDemo.milliseconds / 1000;
+			console.log("elapsedseconds"+ elapsedSeconds);
+			
+
+			VoronoiDemo.robo.x += (toEdgePointVector.magnitudeX * 0.2);
+			VoronoiDemo.robo.y += (toEdgePointVector.magnitudeY * 0.2);
+			console.log("pos updated"+VoronoiDemo.robo.x+" "+VoronoiDemo.robo.y);
+			if(elapsedSeconds == 1){
+				VoronoiDemo.milliseconds = 0;
+			}
+			//complete the current edge first
+		}
+	}
+	function Vector(magnitude, angle) {
+		var angleRadians = (angle * Math.PI) / 180;
+
+		this.magnitudeX = magnitude * Math.cos(angleRadians);
+		this.magnitudeY = magnitude * Math.sin(angleRadians);
+	}
+	function distanceAndAngleBetweenTwoPoints(x1, y1, x2, y2) {
+		var x = x2 - x1,
+			y = y2 - y1;
+
+		return {
+			// x^2 + y^2 = r^2
+			distance: Math.sqrt(x * x + y * y),
+
+			// convert from radians to degrees
+			angle: Math.atan2(y, x) * 180 / Math.PI
+		}
+	}
+
+	var renderCanvas = function() {
+		console.log("challooooo");
+		var canvas = document.getElementById('voronoiCanvas');
+		
+		var ctx = canvas.getContext('2d');
+		// background
+		ctx.globalAlpha = 1;
+		ctx.beginPath();
+		ctx.rect(0,0,canvas.width,canvas.height);
+		ctx.fillStyle = '#fff';
+		ctx.fill();
+		ctx.strokeStyle = '#888';
+		ctx.stroke();
+		// voronoi
+		if (!VoronoiDemo.diagram) {return;}
+		ctx.strokeStyle='#000';
+		// edges
+		var edges = VoronoiDemo.diagram.edges,
+			nEdges = edges.length,
+			v;
+		if (nEdges) {
+			var edge;
+			ctx.beginPath();
+			while (nEdges--) {
+				edge = edges[nEdges];
+				v = edge.va;
+				ctx.moveTo(v.x,v.y);
+				v = edge.vb;
+				ctx.lineTo(v.x,v.y);
+				
+				}
+			ctx.stroke();
+			}
+		// how many sites do we have?
+		var sites = VoronoiDemo.sites,
+			nSites = sites.length;
+		if (!nSites) {return;}
+		// highlight cell under mouse
+		var cell = VoronoiDemo.diagram.cells[VoronoiDemo.sites[0].voronoiId];
+		// there is no guarantee a Voronoi cell will exist for any
+		// particular site
+		if (cell) {
+			var halfedges = cell.halfedges,
+				nHalfedges = halfedges.length;
+			if (nHalfedges > 2) {
+				v = halfedges[0].getStartpoint();
+				ctx.beginPath();
+				ctx.moveTo(v.x,v.y);
+				for (var iHalfedge=0; iHalfedge<nHalfedges; iHalfedge++) {
+					v = halfedges[iHalfedge].getEndpoint();
+					ctx.lineTo(v.x,v.y);
+					}
+				//ctx.fillStyle = '#faa';
+				ctx.fill();
+				}
+			}
+		// draw sites
+		var site;
+		ctx.beginPath();
+		ctx.fillStyle = '#44f';
+		
+		while (nSites--) {
+			site = sites[nSites];
+			ctx.rect(site.x-2/3,site.y-2/3,2,2);
+			}
+		ctx.fill();
+
+		ctx.beginPath();
+		ctx.fillStyle = '#ff0000';
+		if(VoronoiDemo.start != null){
+			var endPoint = VoronoiDemo.start;
+			ctx.fillRect(endPoint.x-2/3,endPoint.y-2/3,5,5);
+		}
+		if(VoronoiDemo.end != null){
+			var endPoint = VoronoiDemo.end;
+			ctx.fillRect(endPoint.x-2/3,endPoint.y-2/3,5,5);
+		}
+		// if (VoronoiDemo.runRobo){
+		// 	VoronoiDemo.robo.x = VoronoiDemo.robo.x+2;
+		// 	VoronoiDemo.robo.y = VoronoiDemo.robo.y+2;
+		// }
+		//console.log(VoronoiDemo.runRobo)
+		//console.log(VoronoiDemo.robo)
+		ctx.beginPath();
+		ctx.fillStyle = "#0000ff";
+		ctx.fillRect(VoronoiDemo.robo.x,VoronoiDemo.robo.y,VoronoiDemo.robo.width*15,VoronoiDemo.robo.height*15);
+		setTimeout(function() {
+              requestAnimationFrame(renderCanvas);
+          }, 1000 / 60);
+		}
+		window.onload = (event) => {
+			VoronoiDemo.init();
+			renderCanvas();
+		};
+		
+		
 </script>
 </head>
 <body onload="VoronoiDemo.init();">
 <!--<h4 class="divhdr">Sites generator</h4>
 <div class="divinfo" id="voronoiGenerator">-->
 <input type="button" onclick="VoronoiDemo.clearInternalEdges()" value="Clear Internal Edges" />
+<input type="button" onclick="VoronoiDemo.run()" value="Animate" />
 <!--<input type="button" value="Generate" onclick="VoronoiDemo.randomSites(parseInt(document.getElementById('voronoiNumberSites').value,10),true);VoronoiDemo.render();"/> or <input type="button" value="Add" onclick="VoronoiDemo.randomSites(parseInt(document.getElementById('voronoiNumberSites').value,10),false);VoronoiDemo.render();"/><input id="voronoiNumberSites" type="text" value="10" size="5" maxlength="5"/> sites randomly (Warning: performance might suffer the more sites you add.)
 <br/><input id="voronoiClearSites" type="button" value="Clear all sites" onclick="VoronoiDemo.clearSites();VoronoiDemo.render();"/>
 </div>-->
